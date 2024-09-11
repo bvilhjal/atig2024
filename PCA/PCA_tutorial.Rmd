@@ -91,12 +91,12 @@ obj.svd <- bed_autoSVD(obj.bed, ind.row = ind.norel, k = 20,
 
 ##### Q7: Plot the proportion of variance explained by each PC. Which PC explains most genetic variation?
 
-##### Q8: Make a cumulative plot of the variance explained PC. How many PCs do you need to explain 90% of the variation?
+##### Q8: Make a cumulative plot of the variance explained by the PCs. How many PCs do you need to explain 90% of the variation?
 
 Hint: Use the `cumsum()` function.
 
 
-##### Q9: Plot the PCs pairwise.
+##### Q9: Plot the PCs.
 
 You can color the plots based on the ancestral information from the .fam2 file in the data folder.
 
