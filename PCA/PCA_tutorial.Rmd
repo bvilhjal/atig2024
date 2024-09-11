@@ -68,9 +68,7 @@ str(rel)
 
 ##### Q2: What threshold was used to filter related individuals? What level of relatedness does it correspond to?
 
-##### Q3: How many individuals were removed?
-
-##### Q4: Can you plot the kinship values, also using a less stringent threshold?
+##### Q3: Can you plot the kinship values, also using a less stringent threshold?
 
 #### Principal Component Analysis (PCA)
 
@@ -85,7 +83,9 @@ obj.svd <- bed_autoSVD(obj.bed, ind.row = ind.norel, k = 20,
                        ncores = nb_cores())
 ```
 
-##### Q5: What did we do with the related individuals?
+##### Q4: How many individuals were related?
+
+##### Q5: What did we do with them?
 
 ##### Q6: What other parameters does bed_autoSVD accept?
 
