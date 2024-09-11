@@ -160,9 +160,3 @@ ggplot(data = PCs_df, mapping = aes(x = PC3, y = PC4)) +
 ##### Q14: Did the PCs 1-8 change?  Why or why not?
 
 
-#### Restricting to a specific ancestry
-
-We want the set of individuals in our LD reference to have similar ancestry as the ones in our summary statistics. E.g. if we want to use summary statistics based on individuals with East Asian ancestry, we should exclude individuals that have a different ancestry in our LD reference. If labels are available we can use these. If not, then we can project the LD reference data on to 1KG and exclude individuals that land far away from individuals with the target ancestry. You can use functions `cov <- bigutilsr::covrob_ogk(PC[ind_eur, ])` and `log_dist <- log(mahalanobis(PC, center = cov$center, cov = cov$cov))` for this purpose.
-
-##### Q15: Try to work out how to implement this filtering and plot again. (possibly difficult)
-
