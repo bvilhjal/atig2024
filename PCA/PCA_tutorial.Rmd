@@ -87,15 +87,20 @@ obj.svd <- bed_autoSVD(obj.bed, ind.row = ind.norel, k = 20,
 
 ##### Q5: What did we do with them?
 
-##### Q6: What other parameters does bed_autoSVD accept?
+##### Q6: How many PCs do we estimate?
 
-##### Q7: How many PCs do we estimate?
+##### Q7: Plot the proportion of variance explained by each PC. Which PC explains most genetic variation?
 
-##### Q8: Can you plot them? 
+##### Q8: Make a cumulative plot of the variance explained PC. How many PCs do you need to explain 90% of the variation?
 
-##### Q9: Which PC explains most genetic variation?
+Hint: Use the `cumsum()` function.
 
-##### Q10: Can you describe what these PCs 3-8 are capturing?
+
+##### Q9: Plot the PCs pairwise.
+
+You can color the plots based on the ancestral information from the .fam2 file in the data folder.
+
+##### Q10: Can you describe what PCs 3-8 are capturing?
 
 
 
@@ -140,23 +145,7 @@ PCs[-ind.row, ] <- proj$OADP_proj
 
 ##### Q13: How do we project individuals onto a PC space?  (might have to read paper or do math)
 
-We can plot the PCs again.
 
-```{r}
-anc_info <- read.delim('data/1000G_phase3_common_norel.fam2')
-PCs_df <- as.data.frame(PCs)
-colnames(PCs_df) <- paste("PC",1:20,sep="")
-
-ggplot(data = PCs_df, mapping = aes(x = PC1, y = PC2)) +
-    scale_color_viridis(name="Ancestry", discrete = TRUE)+
-    geom_point(aes(color = anc_info$Super.Population))
-
-ggplot(data = PCs_df, mapping = aes(x = PC3, y = PC4)) +
-    scale_color_viridis(name="Ancestry", discrete = TRUE)+
-    geom_point(aes(color = anc_info$Super.Population))
-
-```
-
-##### Q14: Did the PCs 1-8 change?  Why or why not?
+##### Q14: Plot the PCs again. Did the PCs 1-8 change?  Why or why not?
 
 
