@@ -19,12 +19,12 @@ There are several requirements for completing this exercise.
 
 
 ```{r, setup, include=FALSE}
-knitr::opts_knit$set(root.dir = '/Users/au507860/Downloads')
+knitr::opts_knit$set(root.dir = 'atig2024/PCA/')
 ```
 
 First we load the bigsnpr package.
 
-```{r}
+```{r, echo = FALSE}
 library(bigsnpr)
 library(R.utils)
 
@@ -48,7 +48,6 @@ bedfile <- download_1000G("data")
 ```
 ##### Q1: What are plink bed files?
 
-##### A1: They are binary genotype files
 
 #### Relateness
 
@@ -68,14 +67,10 @@ str(rel)
 ```
 
 ##### Q2: What threshold was used to filter related individuals? What level of relatedness does it correspond to?
-##### A2: The kinship coefficient is defined as the probability that a pair of randomly sampled homologous alleles are identical by descent. This is different from genetic relatedness matrix.  Threshold used is thr.king = 2^-4.5
 
 ##### Q3: How many individuals were removed?
-##### A3: (Sorry asked too early). length(unique(ind.rel)) gives 58
 
 ##### Q4: Can you plot the kinship values, also using a less stringent threshold?
-##### A4: Rerun with less stringent threshol and plot hist(rel$KINSHIP)
-
 
 #### Principal Component Analysis (PCA)
 
@@ -91,30 +86,10 @@ obj.svd <- bed_autoSVD(obj.bed, ind.row = ind.norel, k = 20,
 ```
 
 ##### Q5: What did we do with the related individuals?
-##### A5: We removed 58 individuals
-
 
 ##### Q6: What other parameters does bed_autoSVD accept?
-##### A6: (obj.bed, ind.row = ind.norel, k = 20, ncores = nb_cores()). k refers to the number of PCs
-  obj.bed,
-  ind.row = rows_along(obj.bed),
-  ind.col = cols_along(obj.bed),
-  fun.scaling = bed_scaleBinom,
-  thr.r2 = 0.2,
-  size = 100/thr.r2,
-  k = 10,
-  roll.size = 50,
-  int.min.size = 20,
-  alpha.tukey = 0.05,
-  min.mac = 10,
-  max.iter = 5,
-  ncores = 1,
-  verbose = TRUE
-
 
 ##### Q7: How many PCs do we estimate?
-##### A7: 20
-
 
 We can plot these PCs.
 
@@ -129,13 +104,10 @@ plot_grid(plotlist = lapply(1:4, function(k) {
 ```
 
 ##### Q8: Which PC explains most genetic variation?
-##### A8: The first PC. (>obj.svd$d gives the eigenvalues)
 
 ##### Q9: Can you describe what these PCs 3-8 are capturing?
-##### A9: The first PC
 
 ##### Q10: Can you plot the 20 PCs?  
-##### A10: plot_grid(plotlist = lapply(1:10, ...
 
 
 #### Outlier sample detection (quality control)
@@ -159,10 +131,8 @@ obj.svd2 <- bed_autoSVD(obj.bed, ind.row = ind.row,
 ```
 
 ##### Q11: How many individuals were removed?  
-##### A11: length(ind.norel[S > 0.5]) =1
-##### Q12: What are we filtering on? (may have to read the paper to answer this) 
-##### A12: A metric based on KNN (see paper)
 
+##### Q12: What are we filtering on? (may have to read the paper to answer this) 
 
 
 #### Final PCA with all individuals
@@ -180,7 +150,6 @@ PCs[-ind.row, ] <- proj$OADP_proj
 ```
 
 ##### Q13: How do we project individuals onto a PC space?  (might have to read paper or do math)
-##### A13: Generally it uses Online Augmentation, Decomposition, and Procrustes (OADP) (Zhang et al., Bioinformatics 2020)
 
 We can plot the PCs again.
 
@@ -200,7 +169,6 @@ ggplot(data = PCs_df, mapping = aes(x = PC3, y = PC4)) +
 ```
 
 ##### Q14: Did the PCs 1-8 change?  Why or why not?
-##### A14: No, not really.  Only one individual was removed.
 
 
 #### Restricting to a specific ancestry
