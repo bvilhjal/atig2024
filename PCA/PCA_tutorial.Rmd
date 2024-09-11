@@ -91,23 +91,12 @@ obj.svd <- bed_autoSVD(obj.bed, ind.row = ind.norel, k = 20,
 
 ##### Q7: How many PCs do we estimate?
 
-We can plot these PCs.
+##### Q8: Can you plot them? 
 
-```{r}
-anc_info <- read.delim('data/1000G_phase3_common_norel.fam2')[-ind.rel,]
+##### Q9: Which PC explains most genetic variation?
 
-plot_grid(plotlist = lapply(1:4, function(k) {
-  plot(obj.svd, type = "scores", scores = 2 * k - 1:0, coeff = 0.6) +
-  aes(color=anc_info$Super.Population) +
-  scale_color_viridis(name="Ancestry", discrete = TRUE)
-}), scale = 0.95)
-```
+##### Q10: Can you describe what these PCs 3-8 are capturing?
 
-##### Q8: Which PC explains most genetic variation?
-
-##### Q9: Can you describe what these PCs 3-8 are capturing?
-
-##### Q10: Can you plot the 20 PCs?  
 
 
 #### Outlier sample detection (quality control)
