@@ -11,7 +11,7 @@ This exercise generally follows the vignette by Florian Privé available online 
 The most relevant literature is [Privé *et al.*, Bioinformatics 2020](https://doi.org/10.1093/bioinformatics/btaa520). And a draft manual for `bigstatr` and `bigsnpr` can be found [here](https://privefl.github.io/bigsnpr-extdoc/introduction.html). 
 
 ## Prerequisites (IMPORTANT)
-
+<as
 There are several requirements for completing this exercise.
 
 1.  R studio with R version \>3.3.
