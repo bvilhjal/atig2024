@@ -1,0 +1,267 @@
+---
+title: "PCA Exercise using bedpca"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+This exercise generally follows the vignette by Florian Privé available online [**here**](https://privefl.github.io/bigsnpr/articles/bedpca.html).
+
+The most relevant literature is [Privé *et al.*, Bioinformatics 2020](https://doi.org/10.1093/bioinformatics/btaa520). And a draft manual for `bigstatr` and `bigsnpr` can be found [here](https://privefl.github.io/bigsnpr-extdoc/introduction.html). 
+
+## Prerequisites (IMPORTANT)
+
+There are several requirements for completing this exercise.
+
+1.  R studio with R version \>3.3.
+2.  R packages bigsnpr (and bigstatsr). For most users executing the `install.packages("bigsnpr")` ensures this.
+
+
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = 'G:/Mit drev/1. PhD/Undervisning/atig2024/PCA/')
+```
+
+First we load the bigsnpr package.
+
+```{r, include = FALSE}
+library(bigsnpr)
+library(R.utils)
+
+#For plotting
+library(ggplot2) 
+library(viridis)
+
+#Other
+library(runonce)
+
+```
+
+### 1 Principal Component Analysis (PCA) and Relateness
+
+A vignette for how to conduct PCA analyses using the package can be found [**here**](https://privefl.github.io/bigsnpr/articles/bedpca.html).
+
+First we download the 1000 genomes data in plink bed file format, which can take time if the internet connection is slow.
+
+```{r}
+bedfile <- download_1000G("data")
+```
+
+##### Q1: What are plink bed files?
+
+A bed file is one of the three primary PLINK files: .bed, .bim, and .fam, used to store and manipulate large-scale genotype data.
+The bed file stores the actual genotype (0, 1, 2) information in a highly efficient binary format. The bim file stores SNP information (chr, rsid, position, reference allele, alternative allele). Finally, the fam file stores information about the samples (individuals) in the study (family ID, individual ID, paternal ID, maternal ID, sex, phenotype (control/case/missing 1/2/-9)). Fam ID is often 0 or the same as individual ID, paternal and maternal IDs or often 0, because they're unknown.
+
+
+#### Relateness
+
+First, let us detect all pairs of related individuals by filtering on the kinship coefficient. Note that the kinship coefficient is the probability that a pair of randomly sampled homologous alleles are identical by descent (IBD). It's half of the corresponding GRM value, also known as the coefficient of relatedness.
+
+
+```{r}
+plink2 <- download_plink2("data")
+rel <- snp_plinkKINGQC(
+  plink2.path = plink2,
+  bedfile.in = bedfile,
+  thr.king = 2^-4.5,
+  make.bed = FALSE,
+  ncores = nb_cores()
+)
+str(rel)
+```
+
+##### Q2: What threshold was used to filter related individuals? What level of relatedness does it correspond to?
+
+The threshold used to filter related individuals is 2^-4.5 (approx. 0.0442). 
+This threshold corresponds to filtering out third-degree relationships or closer (e.g., great-grandparents). See `?snp_plinkKINGQC`
+
+0.5 corresponds to duplicates or monozygotic twins.
+
+~0.25 corresponds to first-degree relations (e.g., parent-child, full siblings).
+
+~0.125 corresponds to second-degree relations (e.g., half-siblings, grandparents, aunts/uncles).
+
+~0.0625 corresponds to third-degree relations (e.g., great-grandparents)
+
+~0.03125 corresponds to fourth-degree relations (e.g., great-great-grandparents)
+
+
+##### Q3: Can you plot the kinship values, also using a less stringent threshold?
+
+```{r}
+hist(rel$KINSHIP); abline(v = c(2^-4.5, 2^-3.5), col = c("red", "green"))
+```
+
+Anything to the right of the red line would be considered too closely related and would be filtered out when using the 2^-4.5 threshold. Meanwhile, anything to the right of the green line would be considered too closely related and would be filtered out when using the less stringent 2^-3.5 threshold. It appears this would remove no individuals - let's check:
+
+```{r}
+
+rel2 <- snp_plinkKINGQC(
+  plink2.path = plink2,
+  bedfile.in = bedfile,
+  thr.king = 2^-3.5,
+  make.bed = FALSE,
+  ncores = nb_cores()
+)
+str(rel2)
+```
+Using the threshold for filtering away second-degree relatives or closer, results in zero individuals being too closely related, and therefore we would not remove any.
+
+<br>
+
+#### Principal Component Analysis (PCA)
+
+We then remove related individuals and compute PCA on the remaining (unrelated) individuals. The function `bed_autoSVD()` iteratively prunes variants to reduce the risk of the PCA capturing Linkage Disequilibrium (LD).
+
+```{r}
+(obj.bed <- bed(bedfile))
+ind.rel <- match(c(rel$IID1, rel$IID2), obj.bed$fam$sample.ID)
+ind.norel <- rows_along(obj.bed)[-ind.rel]
+
+obj.svd <- bed_autoSVD(obj.bed, ind.row = ind.norel, k = 20,
+                       ncores = nb_cores())
+```
+
+##### Q4: How many individuals were related?
+
+```{r}
+length(unique(ind.rel))
+```
+
+
+##### Q5: What did we do with them?
+
+Removed them
+
+
+##### Q6: How many PCs do we estimate?
+
+20.
+
+##### Q7: Plot the proportion of variance explained by each PC. Which PC explains most genetic variation?
+
+```{r}
+
+pve <- obj.svd$d / sum(obj.svd$d)
+
+plot(pve, xlab = "Principal Component",
+     ylab = "Proportion of Variance Explained",
+     type = "b", pch = 19, col = "blue",
+     main = "Scree Plot")
+
+```
+
+##### Q8: Make a cumulative plot of the variance explained by the PCs. How many PCs do you need to explain 80% of the variation?
+
+Hint: Use the `cumsum()` function.
+
+```{r}
+
+cumulative_pve <- cumsum(pve)
+plot(1:length(cumulative_pve), cumulative_pve, xlab = "Principal Component",
+     ylab = "Cumulative Proportion of Variance Explained",
+     type = "b", pch = 19, col = "red",
+     main = "Cumulative Variance Explained")
+abline(h = 0.8, col = "darkgreen", lty = 2)
+
+```
+
+
+##### Q9: Plot the PCs pairwise.
+
+You can color the plots based on the ancestral information from the .fam2 file in the data folder.
+
+```{r}
+anc_info <- read.delim('data/1000G_phase3_common_norel.fam2')[-ind.rel,]
+
+plot_grid(plotlist = lapply(1:4, function(k) {
+  plot(obj.svd, type = "scores", scores = 2 * k - 1:0, coeff = 0.6) +
+  aes(color=anc_info$Super.Population) +
+  scale_color_viridis(name="Ancestry", discrete = TRUE)
+}), scale = 0.95)
+```
+
+##### Q10: Can you describe what PCs 3-8 are capturing?
+
+The first PCs capture major ancestral differences (continental populations), additional PCs capture finer-scale population structure, differences between subpopulations
+
+<br>
+
+#### Outlier sample detection (quality control)
+
+Then, we look at if there are individual outliers, that could be evidence for genotyping issues.
+
+```{r}
+prob <- bigutilsr::prob_dist(obj.svd$u, ncores = nb_cores())
+S <- prob$dist.self / sqrt(prob$dist.nn)
+
+ggplot() +
+  geom_histogram(aes(S), color = "#000000", fill = "#000000", alpha = 0.5) +
+  scale_x_continuous(breaks = 0:5 / 5, limits = c(0, NA)) +
+  scale_y_sqrt(breaks = c(10, 100, 500)) +
+  theme_bigstatsr() +
+  labs(x = "Statistic of outlierness", y = "Frequency (sqrt-scale)")
+
+```
+
+We can then rerun the PCA without these outliers
+
+```{r}
+ind.row <- ind.norel[S < 0.5]
+ind.col <- attr(obj.svd, "subset") # starting with the previous set of variants kept (we can therefore skip the initial clumping step)
+obj.svd2 <- bed_autoSVD(obj.bed, ind.row = ind.row,
+                        ind.col = ind.col, thr.r2 = NA,
+                        k = 20, ncores = nb_cores())
+```
+
+##### Q11: How many individuals were removed?  
+
+```{r}
+length(ind.norel[S > 0.5])
+```
+
+
+##### Q12: What are we filtering on? (may have to read the paper to answer this) 
+
+A metric based on KNN, identifying outliers by comparing the distance to a points KNNs with the KNNs nearest neighbours.
+
+<br>
+
+#### Final PCA with all individuals
+
+We would still like to obtain the PCA values for the remaining individuals. We do this by projecting the excluded individuals onto the newly derived PCs, to get PCs for all inviduals.
+
+```{r}
+PCs <- matrix(NA, nrow(obj.bed), ncol(obj.svd2$u))
+PCs[ind.row, ] <- predict(obj.svd2)
+
+proj <- bed_projectSelfPCA(obj.svd2, obj.bed,
+                           ind.row = rows_along(obj.bed)[-ind.row],
+                           ncores = 1) # useless -> too few individuals
+PCs[-ind.row, ] <- proj$OADP_proj
+```
+
+##### Q13: How do we project individuals onto a PC space?  (might have to read paper or do math)
+Generally it uses Online Augmentation, Decomposition, and Procrustes (OADP) (Zhang et al., Bioinformatics 2020)
+
+We can plot the PCs again.
+
+```{r}
+anc_info <- read.delim('data/1000G_phase3_common_norel.fam2')
+PCs_df <- as.data.frame(PCs)
+
+colnames(PCs_df) <- paste("PC",1:20,sep="")
+
+ggplot(data = PCs_df, mapping = aes(x = PC1, y = PC2)) +
+    scale_color_viridis(name="Ancestry", discrete = TRUE)+
+    geom_point(aes(color = anc_info$Super.Population))
+
+ggplot(data = PCs_df, mapping = aes(x = PC3, y = PC4)) +
+    scale_color_viridis(name="Ancestry", discrete = TRUE)+
+    geom_point(aes(color = anc_info$Super.Population))
+
+```
+
+##### Q14: Did the PCs 1-8 change?  Why or why not?
+No, not really.  Only one individual was removed.
+
