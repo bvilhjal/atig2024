@@ -1,5 +1,6 @@
 ---
 title: "Liability threshold and time-to-event models"
+author: "Advanced Topics in Genomics - Week 39"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -21,7 +22,7 @@ library(survival)
 
 ## Exercises
 
-These exercises, we will investigate concepts from the liability threshold model and time-to-event (survival) analysis.
+In these exercises, we will work on the concepts of the liability threshold model and time-to-event (survival) analysis.
 
 We will:
  
@@ -29,20 +30,21 @@ We will:
  
  - Estimate heritability from data with both genetic and environmental contributions
  
- - Explore how different biases affect the data
+ - Explore the impact of ascertainment bias
 
  - Perform survival analysis to account for left and right censoring of data  
 
 <br>
+
 #### Part 1: Simulating data under the liability threshold model
 
-The liability threshold model assumes that each individual has an underlying liability or genetic predisposition, which follows a normal distribution. Only individuals whose liability exceeds a certain threshold are considered cases.
+The liability threshold model assumes that each individual has an underlying liability, which follows a normal distribution. Only individuals whose liability exceeds a certain threshold are considered cases.
 
 ```{r}
 
 # Parameters
-n_individuals <- 10000     # Number of individuals
-n_snps <- 1000           # Number of SNPs that contribute to an individuals liability
+n_individuals <- 10000    # Number of individuals
+n_snps <- 1000            # Number of SNPs that contribute to an individuals liability
 maf <- 0.3                # Minor allele frequency
 heritability <- 0.5       # Heritability of liability
 threshold <- qnorm(0.95)  # Threshold 
@@ -92,9 +94,10 @@ for (i in 1:n_individuals) {
 rnorm(n_individuals, mean = 0, sd = sqrt(1 - heritability)): This adds an environmental noise component to the liability, which has variance 1 - heritability to ensure that the total variance is 1. This noise represents non-genetic factors influencing liability.
 
 <br>
-#### Part 2: 
 
-In this exercise, we will add an environmental component to the liability model to reflect the influence of non-genetic factors. This allows us to model a more realistic scenario where liability is influenced by both genetic and environmental factors.
+#### Part 2: Liability with an environmental component
+
+We will now add an environmental component to the liability model to reflect the influence of non-genetic factors. This allows us to model a more realistic scenario where liability is influenced by both genetic and environmental factors.
 
 ```{r}
 # Add environmental noise to the genetic liability
@@ -116,9 +119,6 @@ table(phenotype_env)
 ##### Q5: How does adding environmental noise affect the liability distribution? How does it influence the classification of individuals as cases or controls?
 ##### A5: The overall variance of the liability increases when environmental noise is added. As a result, the liability distribution becomes wider and more individuals will have extreme liability scores because the random environmental effects can push their total liability further from the mean. This results in more individuals exceeding the threshold
 
-DELETE:
-This randomness reflects real-world scenarios where individuals with similar genetic risk can have different outcomes due to environmental influences. Consequently, some individuals who would not have been classified as cases based solely on their genetic liability may now be classified as cases due to the added environmental component.
-
 <br>
 
 We can now estimate the heritability as the ratio of genetic variance to total variance.
@@ -135,11 +135,10 @@ heritability_est
 ##### Q6: Compare the estimated heritability with the true value used in the simulation. What factors might cause these values to differ?
 ##### A6: Even in a simulated environment where the true heritability is known, the inherent randomness in the simulation process leads to variability in the estimated heritability. Factors like random sampling of genotypes, random drawing of SNP effect sizes and environmental noise, finite sample size (both individuals and SNPs), and the estimation method itself (the assumptions of the model) can cause the estimated heritability to differ from the true value. 
 
-DELETE
-NB:In reality, complex traits are often influenced by thousands of genetic variants with small effects. When using a limited number of SNPs, the genetic variance might not be fully captured.  
-
 <br>
+
 #### Part 3: Ascertainment bias
+
 Ascertainment bias occurs when cases and controls are sampled in a biased manner, often leading to over-representation of certain groups. This can significantly distort effect size estimates and heritability. 
 
 In this exercise, we will simulate ascertainment bias by oversampling cases and investigate how this bias alters the data.
@@ -152,7 +151,7 @@ ascertained_controls <- sample(which(phenotype_env == 0), 5000, replace = TRUE)
 ascertained_sample <- c(ascertained_cases, ascertained_controls)
 
 # Visualize the ascertained data
-liability_ascertained <- liability_env[ascertained_sample]
+liability_ascertained <- total_liability[ascertained_sample]
 phenotype_ascertained <- phenotype_env[ascertained_sample]
 
 hist(liability_ascertained, main = "Ascertainment Bias in Sampled Data", xlab = "Liability", xlim = c(-3, 3), breaks = 30, col = "lightcoral")
@@ -160,6 +159,11 @@ abline(v = threshold, col = "red", lwd = 2)
 
 
 ```
+
+##### Q7: How does ascertainment bias alter the distribution of liability in the sample compared to before?
+##### A7: The distribution is no longer normal, which violates model assumptions
+
+##### Q8: Reestimate the heritability. How has the estimate changed from before? Why?
 ```{r}
 
 genetic_liability_ascertained <- genetic_liability[ascertained_sample]
@@ -170,20 +174,20 @@ var_total <- var(liability_ascertained)
 heritability_est <- var_genetic / var_total
 heritability_est
 ```
-##### Q7: How does ascertainment bias alter the distribution of liability in the sample compared to the full population?
-##### Q8: Why do effect size estimates and heritability estimates become biased in ascertained samples?
+
 
 <br>
-#### Part 4:
+
+#### Part 4: Accounting for left and right censoring
 Survival analysis models are designed to handle time-to-event data and can account for right and left censoring. In this exercise, you will simulate time-to-event data and perform survival analysis using the Cox proportional hazards model.
 
-We simulate both the time to event (e.g., time to disease onset) and censoring times (e.g., time when an individual's data is no longer available). The Cox model will help us analyze how genetic factors affect the risk of experiencing the event.
+We simulate both the time to event and censoring times (e.g., time when an individual's data is no longer available). The Cox model will help us analyze how genetic factors affect the risk of experiencing the event.
 
 ```{r}
 
 # Simulate survival times
 set.seed(123)
-time_to_event <- rexp(n_individuals, rate = exp(liability_env - mean(liability_env)))
+time_to_event <- rexp(n_individuals, rate = exp(total_liability - mean(total_liability)))
 censoring_time <- rexp(n_individuals, rate = 0.02) # Censoring time
 observed_time <- pmin(time_to_event, censoring_time)
 event <- ifelse(time_to_event <= censoring_time, 1, 0) # Event indicator
@@ -198,16 +202,15 @@ summary(cox_model)
 
 ```
 ##### Q9: How does the estimated hazard ratio from the Cox model help us understand the effect of genetics on the time to disease onset?
-
+##### A9: The hazard ratio provides a measure of the relative risk of experiencing the event based on their genotypes
 
 ```{r}
 km_fit <- survfit(surv_obj ~ phenotype_env, conf.type = "log-log")
-plot(km_fit, col = c("blue", "red"), lty = 1:2, xlab = "Time", ylab = "Survival Probability", xlim = c(0, 15), main = "Kaplan-Meier Curve by Phenotype")
+plot(km_fit, col = c("blue", "red"), lty = 1:2, xlab = "Time", ylab = "Survival Probability", main = "Kaplan-Meier Curve by Phenotype")
 legend("topright", legend = c("Control", "Case"), col = c("blue", "red"), lty = 1:2)
 
 ```
+
 ##### Q10: How does the survival curve differ between cases and controls? What does this tell you about disease risk over time?
+##### A10: The survival curve for cases declines more rapidly, indicating that cases experience the event at a faster rate. This divergence reflects the underlying risk factors that differentiate cases from controls, offering insights into disease dynamics over time.
 
-##### Q11: Can you think of examples from genomics where censoring might occur?
-
-##### Q12: How might you design a real-world study to avoid biases like ascertainment or censoring? What factors would you need to consider in a genomic study with survival outcomes?
