@@ -80,19 +80,6 @@ table(phenotype)
 ##### Q3: Look at line 56 in the code. How are the SNP effect sizes calculated and what assumption is it based on?
 ##### A3: The effect sizes are drawn from a normal distribution with mean 0 and a standard deviation proportional to the heritability. It assumes that each SNP contributes equally to the genetic liability.
 
-DELETE:
-The rest of the code:
-
-Line 59: 
-genotypes %*% beta: This computes the genetic liability for each individual by taking a weighted sum of the individual's genotypes, with weights given by the SNP effect sizes (beta).
-
-genetic_liability <- numeric(n_individuals)
-for (i in 1:n_individuals) {
-  genetic_liability[i] <- sum(genotypes[i, ] * beta)
-}
-
-rnorm(n_individuals, mean = 0, sd = sqrt(1 - heritability)): This adds an environmental noise component to the liability, which has variance 1 - heritability to ensure that the total variance is 1. This noise represents non-genetic factors influencing liability.
-
 <br>
 
 #### Part 2: Liability with an environmental component
