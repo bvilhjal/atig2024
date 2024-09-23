@@ -1,0 +1,10 @@
+---
+title: "Polygenic Scores Exercises"
+author: "Advanced Topics in Genomics - Week 40"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
