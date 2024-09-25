@@ -62,20 +62,15 @@ genetic_liability <- genotypes %*% beta
 # Classify individuals as cases or controls based on threshold
 phenotype <- ifelse(genetic_liability > threshold, 1, 0)
 
-# Visualize the distribution of liability
-hist(genetic_liability, main = "Genetic Liability Distribution", xlab = "Liability", xlim = c(-3, 3), breaks = 30, col = "lightblue")
-abline(v = threshold, col = "red", lwd = 2)
-
-# Print the number of cases
-table(phenotype)
-
-
 ```
-##### Q1: Look at the genotype matrix. What does 0, 1, 2 designate?
 
-##### Q2: What does the threshold `threshold <- qnorm(0.95) ` indicate?
+##### Q1: Make a histogram over the genetic liabilities. How many cases are there?
 
-##### Q3: Look at line 56 in the code. How are the SNP effect sizes calculated and what assumption is it based on?
+##### Q2: Look at the genotype matrix. What does 0, 1, 2 designate?
+
+##### Q3: What does the threshold `threshold <- qnorm(0.95) ` indicate?
+
+##### Q4: Look at line 56 in the code. How are the SNP effect sizes calculated and what assumption is it based on?
 
 <br>
 
@@ -90,16 +85,13 @@ total_liability <- genetic_liability + rnorm(n_individuals, mean = 0, sd = sqrt(
 # Classify based on threshold
 phenotype_env <- ifelse(total_liability > threshold, 1, 0)
 
-# Visualize liability with environmental effects
-hist(total_liability, main = "Liability with Environmental Component", xlab = "Liability", xlim = c(-3, 3), breaks = 30, col = "lightgreen")
-abline(v = threshold, col = "red", lwd = 2)
-
-table(phenotype_env)
-
 ```
-##### Q4: How have we modeled environmental variance in the code above?
 
-##### Q5: How does adding environmental noise affect the liability distribution? How does it influence the classification of individuals as cases or controls?
+##### Q5: Make a histogram over the liabilities.
+
+##### Q6: How have we modeled environmental variance in the code above?
+
+##### Q7: How does adding environmental noise affect the liability distribution? How does it influence the classification of individuals as cases or controls?
 
 <br>
 
@@ -114,7 +106,7 @@ heritability_est
 
 
 ```
-##### Q6: Compare the estimated heritability with the true value used in the simulation. What factors might cause these values to differ?
+##### Q8: Compare the estimated heritability with the true value used in the simulation. Why are these different?
 
 <br>
 
@@ -141,9 +133,9 @@ abline(v = threshold, col = "red", lwd = 2)
 
 ```
 
-##### Q7: How does ascertainment bias alter the distribution of liability in the sample compared to before?
+##### Q9: How does ascertainment bias alter the distribution of liability in the sample compared to before?
 
-##### Q8: Reestimate the heritability. How has the estimate changed from before? Why?
+##### Q10: Reestimate the heritability. How has the estimate changed from before? Why?
 
 
 <br>
@@ -171,7 +163,7 @@ summary(cox_model)
 
 
 ```
-##### Q9: How does the estimated hazard ratio from the Cox model help us understand the effect of genetics on the time to disease onset?
+##### Q11: How does the estimated hazard ratio from the Cox model help us understand the effect of genetics on the time to disease onset?
 
 ```{r}
 km_fit <- survfit(surv_obj ~ phenotype_env, conf.type = "log-log")
@@ -180,4 +172,4 @@ legend("topright", legend = c("Control", "Case"), col = c("blue", "red"), lty = 
 
 ```
 
-##### Q10: How does the survival curve differ between cases and controls? What does this tell you about disease risk over time?
+##### Q12: How does the survival curve differ between cases and controls? What does this tell you about disease risk over time?
