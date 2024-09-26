@@ -147,29 +147,63 @@ We simulate both the time to event and censoring times (e.g., time when an indiv
 
 ```{r}
 
-# Simulate survival times
-set.seed(123)
-time_to_event <- rexp(n_individuals, rate = exp(total_liability - mean(total_liability)))
-censoring_time <- rexp(n_individuals, rate = 0.02) # Censoring time
-observed_time <- pmin(time_to_event, censoring_time)
-event <- ifelse(time_to_event <= censoring_time, 1, 0) # Event indicator
+set.seed(17)
 
-# Create survival object
-surv_obj <- Surv(observed_time, event)
+# Identifying indices for cases and controls
+case_indices <- which(phenotype_env == 1)
+control_indices <- which(phenotype_env == 0)
 
-# Fit Cox proportional hazards model
-cox_model <- coxph(surv_obj ~ genotypes[,1])
+# Simulate time-to-event using exponential distribution
+# Time-to-event for cases
+time_to_event_case <- rexp(length(case_indices), rate = 0.02)
+
+# Time-to-event for controls
+time_to_event_control <- rexp(length(control_indices), rate = 0.005) # We have modeled the events for cases to occur at a slightly higher rate, but this is arbitrary
+
+# Create a time_to_event vector in the same order as the phenotype vector
+time_to_event <- numeric(length(phenotype_env))  # Initialize an empty vector
+time_to_event[case_indices] <- time_to_event_case  # Assign event times to cases
+time_to_event[control_indices] <- time_to_event_control  # Assign follow-up times to controls
+
+# Create event status: 1 for cases (event happened), 0 for controls (censored)
+event_status <- phenotype_env
+
+# Add the first SNP as a covariate for the CoxPH model (for demonstration)
+snp1 <- genotypes[, 1]
+
+# Fitting the model
+cox_model <- coxph(Surv(time_to_event, event_status) ~ snp1)
+
+# Summarize the CoxPH model
 summary(cox_model)
 
-
 ```
-##### Q11: How does the estimated hazard ratio from the Cox model help us understand the effect of genetics on the time to disease onset?
+##### Q11: How does the estimated hazard ratio from the Cox model help us understand the effect of SNP1 on disease onset?
 
 ```{r}
-km_fit <- survfit(surv_obj ~ phenotype_env, conf.type = "log-log")
-plot(km_fit, col = c("blue", "red"), lty = 1:2, xlab = "Time", ylab = "Survival Probability", main = "Kaplan-Meier Curve by Phenotype")
+lambda_death_case <- 0.1  # Slightly increase case event rate
+lambda_death_control <- 0.06  # Slightly reduce control event rate
+
+# Simulate time to event for cases and controls
+time_to_death_case <- rexp(sum(phenotype_env == 1), rate = lambda_death_case)
+time_to_death_control <- rexp(sum(phenotype_env == 0), rate = lambda_death_control)
+
+# Combine time to event into a single vector
+time_to_event <- numeric(length(phenotype_env))  # Initialize empty vector
+time_to_event[phenotype_env == 1] <- time_to_death_case  # Assign event times to cases
+time_to_event[phenotype_env == 0] <- time_to_death_control  # Assign event times to controls
+
+# Simulate censoring: Assume some individuals are censored
+event_status <- rbinom(n_individuals, 1, 0.7)  # 70% of individuals experience the event
+
+# Kaplan-Meier curve stratified by phenotype
+km_fit <- survfit(Surv(time_to_event, event_status) ~ phenotype_env)
+
+# Plot the KM curve
+plot(km_fit, col = c("blue", "red"), lty = 1:2, xlab = "Time", ylab = "Survival Probability",
+     main = "Kaplan-Meier Curve")
 legend("topright", legend = c("Control", "Case"), col = c("blue", "red"), lty = 1:2)
 
 ```
 
-##### Q12: How does the survival curve differ between cases and controls? What does this tell you about disease risk over time?
+##### Q12: How does the survival curve differ between cases and controls?
