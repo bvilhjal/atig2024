@@ -32,7 +32,7 @@ This exercise generally follows the vignette by Florian Privé available online 
 #### Downloading genotypes data and summary statistics
 
 A PGS is calculated as a weighted sum of alleles, where the weights are typically derived from genome-wide association studies (GWAS). 
-In this exercise session, we will compute PGSs using LDpred2, for what we need GWAS summary statistics as well as genotype data for prediction.
+In this exercise session, we will compute PGSs using LDpred2-auto, for what we need GWAS summary statistics as well as genotype data for prediction.
 
  1. Downloading example data:
 
@@ -56,7 +56,7 @@ info <- readRDS(runonce::download_file(
 
 ```{r}
 # Read from bed/bim/fam, it generates .bk and .rds files.
-# snp_readBed("tmp-data/public-data3.bed")
+snp_readBed("tmp-data/public-data3.bed")
 # Attach the "bigSNP" object in R session
 obj.bigSNP <- snp_attach("tmp-data/public-data3.rds")
 # See how the file looks like
@@ -79,12 +79,13 @@ str(sumstats)
 Genotype arrays differ in size and imputation can differ in quality. Therefore, your genotype dataset will not necessarily contain the same variants as those of your GWAS, and we will therefore need to find the overlap. First we find the sumstats/HapMap3 overlap
 
 ```{r}
-# the function which finds the SNP-overlap needs some specific columns to run, therefore, we make sure we have everything we need.
 
-# sumstats$n_eff <- 4 / (1 / sumstats$n_case + 1 / sumstats$n_control) # The standard formula to derive effective sample size, if not provided
+# We need an effective sample size from our sumstats, which can be computed as
+# sumstats$n_eff <- 4 / (1 / sumstats$n_case + 1 / sumstats$n_control)
+
 sumstats$n_eff <- sumstats$N # Our sumstats already contain an effective sample size, so we only need to rename the column
 
-# info_beta <- snp_match(sumstats, info)
+info_beta <- snp_match(sumstats, info)
 ```
 
 Here, there is a problem with the matching; this is due to having different genome builds. You can either convert between builds with `snp_modifyBuild()` (or directly use the converted positions in info), or match by rsIDs instead.
@@ -92,6 +93,7 @@ Here, there is a problem with the matching; this is due to having different geno
 ```{r}
 info_beta <- snp_match(sumstats, info, join_by_pos = FALSE)  # use rsid instead of pos
 ```
+
 Now that we have done this, we can find the overlap with our genotype data in which we wish to predict.
 
 ```{r}
@@ -118,7 +120,7 @@ Performing quality control of external summary statistics is highly recommended.
 
 #### Part 4: Computing correlations between variants
 
-First, you need to compute correlations between variants. Florian recommends using a window size of 3 cM (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)).
+To be able to use LDpred2-auto for prediction, you first need to compute correlations between variants. Florian recommends using a window size of 3 cM (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)).
 
 ##### Q5: Compute the genetic positions using the `snp_asGeneticPos()` function. Hint: Remember you can parallelize the process using `ncores = nb_cores()`.
 
@@ -207,15 +209,14 @@ multi_auto <- snp_ldpred2_auto(
   vec_p_init = seq_log(1e-4, 0.2, length.out = 30), ncores = nb_cores(),
   # use_MLE = FALSE,  # uncomment if you have convergence issues or when power is low (need v1.11.9)
   allow_jump_sign = FALSE, shrink_corr = coef_shrink)
-str(multi_auto, max.level = 1)
-str(multi_auto[[1]], max.level = 1)
+
 ```
 
 ##### Q9: How does LDpred2-auto estimate the SNP weights from the summary statistics (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)))? 
 
 ##### Q10: Inspect the `multi_auto` object. What does it contain?
 
-You can verify whether the chains “converged” by looking at the path of the chains.
+You can verify whether the chains converged by looking at the path of the chains.
 
 ##### Q11: Plot the path of both p and h2 of the first chain. Have they converged?
 
@@ -230,10 +231,13 @@ You should now perform some QC of the chains, and only include those that pass i
 
 ##### Q13: How many chains pass QC?
 
-Now we can compute the final weights, using only the chains in `keep`, and then use them to compute the PGS for each sample in our genotype data. 
+Now, we can compute the final weights, using only the chains in `keep`, and then use them to compute the PGS for each sample in our genotype data. 
 
 ```{r}
+# Final SNP weights as means of all the chains that passed QC
 beta_auto <- rowMeans(sapply(multi_auto[keep], function(auto) auto$beta_est))
+
+# Predict in genotyped individuals
 pred_auto <- big_prodVec(obj.bigSNP$genotypes, beta_auto, ind.col = df_beta[["_NUM_ID_"]])
 hist(pred_auto)
 ```
