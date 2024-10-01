@@ -207,7 +207,6 @@ set.seed(17)
 multi_auto <- snp_ldpred2_auto(
   corr, df_beta, h2_init = ldsc_h2_est,
   vec_p_init = seq_log(1e-4, 0.2, length.out = 30), ncores = nb_cores(),
-  # use_MLE = FALSE,  # uncomment if you have convergence issues or when power is low (need v1.11.9)
   allow_jump_sign = FALSE, shrink_corr = coef_shrink)
 
 ```
@@ -239,6 +238,6 @@ beta_auto <- rowMeans(sapply(multi_auto[keep], function(auto) auto$beta_est))
 
 # Predict in genotyped individuals
 pred_auto <- big_prodVec(obj.bigSNP$genotypes, beta_auto, ind.col = df_beta[["_NUM_ID_"]])
-hist(pred_auto)
+hist(pred_auto, xlab = "Polygenic Score", breaks = 30, col = "lightblue")
 ```
 
