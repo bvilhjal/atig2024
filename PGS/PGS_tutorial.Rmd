@@ -211,7 +211,7 @@ multi_auto <- snp_ldpred2_auto(
 
 ```
 
-##### Q9: How does LDpred2-auto estimate the SNP weights from the summary statistics (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)))? 
+##### Q9: What prior distribution does LDpred2 use for SNP effect sizes (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)))? 
 
 ##### Q10: Inspect the `multi_auto` object. What does it contain?
 
