@@ -1,0 +1,283 @@
+---
+title: "Polygenic Scores Exercises"
+author: "Advanced Topics in Genomics - Week 40"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+setwd("../PGS/")
+```
+
+## Prerequisites
+There are several requirements for completing this exercise.
+
+1.  R studio with R version \>3.3.
+2.  R packages bigsnpr, ggplot2, dplyr, and runonce. For most users executing the `install.packages("bigsnpr")` ensures this.
+
+```{r, echo = FALSE}
+library(dplyr)
+library(bigsnpr)
+library(ggplot2)
+library(runonce)
+```
+
+## Exercises
+
+This exercise generally follows the vignette by Florian Privé available online [**here**](https://privefl.github.io/bigsnpr/articles/LDpred2.html), and uses [**LDpred2-auto**](https://doi.org/10.1093/bioinformatics/btaa1029) to compute polygenic scores.
+
+<br>
+
+#### Downloading genotypes data and summary statistics
+
+A PGS is calculated as a weighted sum of alleles, where the weights are typically derived from genome-wide association studies (GWAS). 
+In this exercise session, we will compute PGSs using LDpred2, for what we need GWAS summary statistics as well as genotype data for prediction.
+
+ 1. Downloading example data:
+
+```{r}
+zip <- runonce::download_file(
+  "https://github.com/privefl/bigsnpr/raw/master/data-raw/public-data3.zip",
+  dir = "tmp-data")
+unzip(zip)
+
+```
+
+ 2. Downloading HapMap3:
+
+```{r}
+info <- readRDS(runonce::download_file(
+  "https://figshare.com/ndownloader/files/36360900",
+  dir = "tmp-data", fname = "map_hm3.rds"))
+```
+
+ 3. Read in genotype data:
+
+```{r}
+# Read from bed/bim/fam, it generates .bk and .rds files.
+# snp_readBed("tmp-data/public-data3.bed")
+# Attach the "bigSNP" object in R session
+obj.bigSNP <- snp_attach("tmp-data/public-data3.rds")
+# See how the file looks like
+str(obj.bigSNP, max.level = 2, strict.width = "cut")
+```
+
+ 4. Read in external sumstats
+```{r}
+sumstats <- bigreadr::fread2("tmp-data/public-data3-sumstats.txt")
+str(sumstats)
+```
+
+
+##### Q1: Look in the tmp-data folder. What files does it contain?
+##### A1: The PLINK files: bed, bim, fam are genotype data. It's for the individuals in this dataset we will derive polygenic scores. Then it also contains external summary statistics (from a GWAS on a separate sample), which will be used to compute the SNP-level weights used to calculate the scores.
+
+<br>
+
+#### Part 2: Matching variants in genotype data, HapMap3, and GWAS summary statistics
+
+Genotype arrays differ in size and imputation can differ in quality. Therefore, your genotype dataset will not necessarily contain the same variants as those of your GWAS, and we will therefore need to find the overlap. First we find the sumstats/HapMap3 overlap
+
+```{r}
+# We need an effective sample size from our sumstats, which can be computed as
+# sumstats$n_eff <- 4 / (1 / sumstats$n_case + 1 / sumstats$n_control)
+
+sumstats$n_eff <- sumstats$N # Our sumstats already contain an effective sample size, so we only need to rename the column
+
+# info_beta <- snp_match(sumstats, info)
+```
+
+Here, there is a problem with the matching; this is due to having different genome builds. You can either convert between builds with `snp_modifyBuild()` (or directly use the converted positions in info), or match by rsIDs instead.
+
+```{r}
+info_beta <- snp_match(sumstats, info, join_by_pos = FALSE)  # use rsid instead of pos
+```
+Now that we have done this, we can find the overlap with our genotype data in which we wish to predict.
+
+```{r}
+map <- setNames(obj.bigSNP$map[-3], c("chr", "rsid", "pos", "a1", "a0")) # The needed cols from our genotype data
+df_beta <- info_beta %>% select(!c(`_NUM_ID_.ss`, `_NUM_ID_`))           # cols from previous `snp_match` we don't need
+
+df_beta <- snp_match(sumstats, map, join_by_pos = FALSE)
+
+```
+
+##### Q2: What is a genome build? Why is it important to make sure they match, before we can find the overlap?
+##### A2: The genome build is a reference map used to organize genomic data. Each genome build provides coordinates (positions) for every base pair in the DNA sequence, and newer builds may adjust these coordinates based on more accurate data. Human genome builds include: GRCh37 (also known as hg19) and GRCh38 (also known as hg38). The coordinates of specific variants can vary slightly between builds because of improved accuracy or added sequences in new builds. If the genome builds do not match, the same variant might be annotated with different positions in different builds, leading to misalignment when trying to compare or merge datasets.
+
+##### Q3: What does the `snp_match()` function report and what does it mean? 
+##### A3: It reports how many SNPs were removed and how many were mapped. It also reports, if any variants were flipped, due to inconsistancies between ref and alt alleles in the two dataset
+
+<br>
+
+#### Part 3: Quality control of GWAS summary statistics
+
+Performing quality control of external summary statistics is highly recommended. See the [**vignette**](https://privefl.github.io/bigsnpr/articles/LDpred2.html).
+
+##### Q4: What steps of quality control does it say in the vignette you should perform on the external summary statistics?
+##### A4: Inspect variables such as INFO score and effective populations to find outliers. See this [**vignette**](https://privefl.github.io/bigsnpr-extdoc/polygenic-scores-pgs.html#preparing-the-data).
+
+<br>
+
+#### Part 4: Computing correlations between variants
+
+To be able to use LDpred2-auto for prediction, you first need to compute correlations between variants. Florian recommends using a window size of 3 cM (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)).
+
+##### Q5: Compute the genetic positions using the `snp_asGeneticPos()` function. Hint: Remember you can parallelize the process using `ncores = nb_cores()`.
+##### A5:
+
+```{r}
+POS <- snp_asGeneticPos(obj.bigSNP$map$chromosome, obj.bigSNP$map$physical.pos, dir = "tmp-data", ncores = nb_cores())
+```
+
+
+##### Q6: Now compute the minor allele frequencies using `snp_MAF()` and filter out any variants with MAF below the threshold. See the code below for a few hints.
+
+##### A6:
+
+```{r}
+
+# Compute MAF for all variants
+ind.row <- rows_along(obj.bigSNP$genotypes) # Indices of rows
+ind.col <- df_beta$`_NUM_ID_` # Indices of columns
+
+maf <- snp_MAF(obj.bigSNP$genotypes, ind.row = ind.row, ind.col = ind.col, ncores = nb_cores())
+
+# Threshold Florian Privé prefers to use
+maf_thr <- 1 / sqrt(length(ind.row)) 
+
+# Filtering out variants with MAF below threshold
+df_beta <- df_beta[maf > maf_thr, ]
+
+```
+
+We can now compute the correlation matrix. Take some time to try and understand what is happening in the loop.
+
+```{r}
+
+tmp <- tempfile(tmpdir = "tmp-data")
+
+for (chr in 1:22) {
+  
+  print(chr)
+  
+  ## indices in 'df_beta'
+  ind.chr <- which(df_beta$chr == chr)
+  ## indices in 'G'
+  ind.chr2 <- df_beta$`_NUM_ID_`[ind.chr]
+  
+  # Ordering the POS variable
+  ord <- order(POS[ind.chr2])
+  
+  # here we compute LD matrices ourselves, BUT
+  # we recall that we provide pre-computed LD matrices that are 
+  # usually much better (larger N, LD blocks for robustness, etc)
+  corr0 <- snp_cor(obj.bigSNP$genotypes, ind.col = ind.chr2[ord], size = 3 / 1000,
+                   infos.pos = POS[ind.chr2[ord]], ncores = nb_cores())
+  
+  if (chr == 1) {
+    ld <- Matrix::colSums(corr0^2)
+    corr <- as_SFBM(corr0, tmp, compact = TRUE)
+  } else {
+    ld <- c(ld, Matrix::colSums(corr0^2))
+    corr$add_columns(corr0, nrow(corr))
+  }
+}
+
+```
+
+##### Q7: What is the purpose of computing the LD matrix? Why is it important to account for linkage disequilibrium when calculating polygenic risk scores?
+##### A7: The LD matrix represents the correlations between nearby SNPs. Since SNPs are not inherited independently; due to LD, certain alleles at nearby loci are often inherited together. In the context of PGS calculation, accounting for LD ensures that we adjust the effect sizes of SNPs based on their correlation with other nearby variants. If LD is ignored, the contribution of correlated SNPs might be overestimated, leading to inflated or biased risk scores.
+
+<br>
+
+#### Part 5: Running LDpred2-auto and computing scores
+
+Before running Ldpred2-auto, we need an estimate for the SNP-h2 to initiate the algorithm. 
+We can do this using the `snp_ldsc()` function on our summary statistics.
+
+```{r}
+(ldsc <- with(df_beta, snp_ldsc(ld, length(ld), chi2 = (beta / beta_se)^2,
+                                sample_size = n_eff, blocks = NULL)))
+
+ldsc_h2_est <- ldsc[["h2"]]
+
+```
+
+##### Q8: How is the SNP-h2 estimated with LD score regression (see the [LDSC paper](https://www.nature.com/articles/ng.3211))? 
+##### A8: Each SNP has an LD score, which is the sum of the squared correlations (r²) between that SNP and all other nearby SNPs within a certain distance. A linear regression model is then fit by regressing each variant's GWAS test statistic on it's LD score. The slope of this regression provides an estimate for the SNP heritability. In a polygenic model, SNPs with higher LD scores (those correlated with many nearby SNPs) are more likely to tag true genetic effects across a broader region, and thus, their test statistics will tend to be higher. However, confounding factors, like population stratification, can also increase test statistics.
+
+[Example of LD Score regression from the paper](ld_score_regression.webp)
+
+Now that we have an initial value for the algorithm, we can run LDpred2-auto and compute the weight of each SNP.
+
+```{r}
+coef_shrink <- 0.95  # reduce this up to 0.4 if you have some (large) mismatch with the LD ref
+
+set.seed(17)  
+
+multi_auto <- snp_ldpred2_auto(
+  corr, df_beta, h2_init = ldsc_h2_est,
+  vec_p_init = seq_log(1e-4, 0.2, length.out = 30), ncores = nb_cores(),
+  allow_jump_sign = FALSE, shrink_corr = coef_shrink)
+
+```
+
+##### Q9: What prior distribution does LDpred2-auto use for SNP effect sizes (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)))? 
+##### A9: LDpred2-auto uses a Gaussian mixture prior for the SNP effect sizes. Specifically, it assumes that SNP effect sizes follow a mixture of two distributions: A point mass at zero, which accounts for the fact that many SNPs likely have no effect. A Gaussian distribution for the non-zero effects, which models the effect sizes of the causal SNPs. LDpred2-auto estimates SNP weights by using a Bayesian approach that combines GWAS summary statistics and the LD matrix. It iteratively refines two key parameters: heritability (h²) and the proportion of causal variants/polygenicity (p), using an Expectation-Maximization (EM) algorithm. In each iteration, the model updates the posterior mean effect sizes for each SNP, adjusting for LD and the likelihood of being causal, with non-causal SNPs being shrunk toward zero. This process continues until the model converges
+
+##### Q10: Inspect the `multi_auto` object. What does it contain?
+##### A10: `multi_auto` contain SNP weights, estimates for h2, p, and alpha for every chain the LDpred2-auto has done.
+
+```{r}
+str(multi_auto, max.level = 1)
+str(multi_auto[[1]], max.level = 1)
+```
+
+You can verify whether the chains “converged” by looking at the path of the chains.
+
+##### Q11: Plot the path of both p and h2 of the first chain. Have they converged?
+
+```{r}
+
+auto <- multi_auto[[1]]  # first chain
+plot_grid(
+  qplot(y = auto$path_p_est) + 
+    theme_bigstatsr() + 
+    geom_hline(yintercept = auto$p_est, col = "blue") +
+    scale_y_log10() +
+    labs(y = "p"),
+  qplot(y = auto$path_h2_est) + 
+    theme_bigstatsr() + 
+    geom_hline(yintercept = auto$h2_est, col = "blue") +
+    labs(y = "h2"),
+  ncol = 1, align = "hv"
+)
+```
+
+You should now perform some QC of the chains, and only include those that pass in your final variant weights.
+
+```{r}
+(range <- sapply(multi_auto, function(auto) diff(range(auto$corr_est))))
+(keep <- which(range > (0.95 * quantile(range, 0.95, na.rm = TRUE))))
+```
+
+##### Q12: What does `sapply` do in this context?
+##### A12: sapply applies the function `diff(range(auto$corr_est))` to each element in the `multi_auto` list. `corr_est` represents correlations between
+
+##### Q13: How many chains pass QC?
+##### A13: All of them
+
+Now we can compute the final weights, using only the chains in `keep`, and then use them to compute the PGS for each sample in our genotype data. 
+
+```{r}
+# Final SNP weights as means of all the chains that passed QC
+beta_auto <- rowMeans(sapply(multi_auto[keep], function(auto) auto$beta_est))
+
+# Predict in genotyped individuals
+pred_auto <- big_prodVec(obj.bigSNP$genotypes, beta_auto, ind.col = df_beta[["_NUM_ID_"]])
+hist(pred_auto, xlab = "Polygenic Score", breaks = 30, col = "lightblue")
+```
+
+
