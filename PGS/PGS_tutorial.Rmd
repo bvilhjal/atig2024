@@ -25,7 +25,7 @@ library(runonce)
 
 ## Exercises
 
-This exercise generally follows the vignette by Florian Privé available online [**here**](https://privefl.github.io/bigsnpr/articles/LDpred2.html), and uses [**LDpred2**](https://doi.org/10.1093/bioinformatics/btaa1029) to compute polygenic scores.
+This exercise generally follows the vignette by Florian Privé available online [**here**](https://privefl.github.io/bigsnpr/articles/LDpred2.html), and uses [**LDpred2-auto**](https://doi.org/10.1093/bioinformatics/btaa1029) to compute polygenic scores.
 
 <br>
 
