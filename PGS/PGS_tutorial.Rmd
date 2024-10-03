@@ -124,8 +124,14 @@ To be able to use LDpred2-auto for prediction, you first need to compute correla
 
 ##### Q5: Compute the genetic positions using the `snp_asGeneticPos()` function. Hint: Remember you can parallelize the process using `ncores = nb_cores()`.
 
+```{r}
 
-##### Q6: Now compute the minor alleles frequencies using `snp_MAF()` and filter out any variants with MAF below the threshold. See the code below for a few hints.
+POS <- "?"
+
+```
+
+
+##### Q6: Now compute the minor allele frequencies using `snp_MAF()` and filter out any variants with MAF below the threshold. See the code below for a few hints.
 
 ```{r}
 
@@ -211,7 +217,7 @@ multi_auto <- snp_ldpred2_auto(
 
 ```
 
-##### Q9: What prior distribution does LDpred2 use for SNP effect sizes (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)))? 
+##### Q9: What prior distribution does LDpred2-auto use for SNP effect sizes (see the [**LDpred2 paper**](https://doi.org/10.1093/bioinformatics/btaa1029)))? 
 
 ##### Q10: Inspect the `multi_auto` object. What does it contain?
 
