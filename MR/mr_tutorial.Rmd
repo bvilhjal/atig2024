@@ -20,9 +20,9 @@ The gsmr2 package can be installed via GitHub:
 
 ```{r, include=FALSE}
 # gsmr requires the R-package(s)
-install.packages(c('survey'));
+# install.packages(c('survey'));
 # install gsmr2
-install.packages(devtools::install_github("jianyanglab/gsmr2"))
+# install.packages(devtools::install_github("jianyanglab/gsmr2"))
 
 ```
 
@@ -44,6 +44,10 @@ In this practical session, we will work on Mendelian Randomisation (MR) using th
 <br>
 
 ### Two-sample MR
+
+![](DAG.png)
+
+##### Q1: Look at the diagram above. What are the three assumptions G must fulfill in order to be used as an instrumental variable?
 
 #### Simulating GWAS summary statistics
 
@@ -83,7 +87,9 @@ sample_size_y <- 50000
 
 ```
 
-##### Q1: Read through the above code. How do we simulate the SNP effect sizes for the exposure and the outcome? 
+##### Q2: Read through the above code. How do we simulate the SNP effect sizes for the exposure and the outcome? 
+
+##### Q3: Are the three assumptions of MR met in our simulation?
 
 <br> 
 
@@ -102,11 +108,12 @@ We need to format the data for analysis as GSMR takes its own specific format. I
  - bzy_pval: p value for bzy
  - bzy_n: per-SNP sample size of GWAS for the disease
 
-##### Q2: Reformat your simulated data into one dataframe containing the above-mentioned columns.
+##### Q3: Reformat your simulated data into one dataframe containing the above-mentioned columns.
 
 ```{r}
 
 gsmr_data <- "?"
+
 
 ```
 
@@ -119,7 +126,7 @@ Typically the LD correlation matrix is estimated from genotype data, but in this
 
 ```{r}
 # Decay rate of the correlations
-rho <- 0.1
+rho <- 0.6
 
 # Function to simulate LD correlation with decaying structure
 ld_decay <- function(i, j, rho = rho) {
@@ -149,7 +156,7 @@ ldrho[1:5, 1:5]
 ```
 The parameter `rho` is the decay rate of correlation between SNPs.
 
-##### Q3: How would changing `rho` affect the correlation structure, and how might this influence our MR analysis?
+##### Q4: How would changing `rho` affect the correlation structure, and how might this influence our MR analysis?
 
 <br>
 
@@ -157,14 +164,15 @@ The parameter `rho` is the decay rate of correlation between SNPs.
 
 It is advantageous to standardize SNP effect sizes from the risk factor GWAS before performing GSMR.
 
-##### Q4: Use the `std_effect()` function to standardize `bzx` and `bzx_se`. Save the two new columns in `gsmr_data` as `std_bzx` and `std_bzx_se` respectively.
+##### Q5: Use the `std_effect()` function to standardize `bzx` and `bzx_se`. Save the two new columns in `gsmr_data` as `std_bzx` and `std_bzx_se` respectively.
 
+<br>
 
 #### Running GSMR
 
 We can now run GSMR using the standardized SNP effects.
 
-##### Q5: Run GSMR using the `gsmr()` function.
+##### Q6: Run GSMR using the `gsmr()` function.
 
 ```{r}
 
@@ -173,13 +181,12 @@ gsmr_result <- "?"
 ```
 
 
-
 ```{r}
 cat("The estimated effect of the exposure on outcome: ", gsmr_result$bxy)
 cat("\n The standard error of bxy: ",gsmr_result$bxy_se)
 ```
 
-##### Q6: What is the result of the analysis? What does it signify?
+##### Q7: What is the result of the analysis? What does it signify?
 
 <br>
 
@@ -189,7 +196,7 @@ cat("\n The standard error of bxy: ",gsmr_result$bxy_se)
 
 Pleiotropy occurs when SNPs affect both the exposure and the outcome, which can bias the results when the effect is through pathways other than the intended causal pathway. To account for pleiotropic bias, we can run GSMR with HEIDI-outlier filtering.
 
-##### Q7: Rerun the GSMR analysis with `heidi_outlier_flag = T` and a p-value threshold for the multi-SNP-based global HEIDI-outlier flag of 0.01.
+##### Q8: Rerun the GSMR analysis with `heidi_outlier_flag = T` and a p-value threshold for the multi-SNP-based global HEIDI-outlier flag of 0.01.
 
 ```{r}
 
@@ -202,10 +209,9 @@ cat("The estimated effect of the exposure on outcome: ", gsmr_heidi_result$bxy)
 cat("\n Standard error of bxy: ", gsmr_heidi_result$bxy_se)
 ```
 
-##### Q8: How does the estimated effect of the exposure on the outcome change after applying HEIDI-outlier filtering compared to before?
+##### Q9: How does the estimated effect of the exposure on the outcome change after applying HEIDI-outlier filtering compared to before?
 
-##### Q9: How does HEIDI-outlier filtering detect potential pleiotropic SNPs? See the [**paper**](https://www.nature.com/articles/ng.3538)
-
+##### Q10: How does HEIDI-outlier filtering detect potential pleiotropic SNPs? See the [**paper**](https://www.nature.com/articles/ng.3538)
 
 <br>
 
@@ -233,4 +239,13 @@ cat("Egger intercept (Pleiotropy):", intercept, " (p-value:", intercept_pvalue, 
 
 ```
 
-##### Q10: Inspect the results. What is the intercept? 
+##### Q11: Inspect the results. What is the intercept? 
+
+<br>
+
+#### Summing up
+
+By working a bit with the data, we should now have a clearer answer for Q3 than we did in the beginning. Therefore, knowing what you know now, answer this question again:
+
+##### Q12: Are the three assumptions of MR met in our simulation? 
+
