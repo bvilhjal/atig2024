@@ -20,9 +20,9 @@ The gsmr2 package can be installed via GitHub:
 
 ```{r, include=FALSE}
 # gsmr requires the R-package(s)
-# install.packages(c('survey'));
+install.packages(c('survey'));
 # install gsmr2
-# install.packages(devtools::install_github("jianyanglab/gsmr2"))
+install.packages(devtools::install_github("jianyanglab/gsmr2"))
 
 ```
 
@@ -47,7 +47,9 @@ In this practical session, we will work on Mendelian Randomisation (MR) using th
 
 ![](DAG.png)
 
-##### Q1: Look at the diagram above. What are the three assumptions G must fulfill in order to be used as an instrumental variable?
+##### Q1: Look at the diagram above. What are the three assumptions Z must fulfill in order to be used as an instrumental variable?
+
+<br>
 
 #### Simulating GWAS summary statistics
 
